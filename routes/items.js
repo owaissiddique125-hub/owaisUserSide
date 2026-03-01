@@ -27,28 +27,19 @@ const upload = multer({
  */
 router.get('/', clerkAuth, async (req, res, next) => {
   try {
-    // 1. Query se page aur limit uthayein
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const { category } = req.query;
     
-    // 2. Supabase ki range calculate karein
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
     let query = supabase
       .from('items')
-      .select('*', { count: 'exact' }) // Exact count se total ka pata chalta hai
+      .select('*')
       .eq('available', true)
-      .order('created_at', { ascending: false })
-      .range(from, to); // Sirf makhsoos range uthao
+      .order('created_at', { ascending: false });
     
-    if (req.query.category) {
-      // 🔥 Handle category with/without spaces - case insensitive
-      const searchCategory = req.query.category.trim();
-      query = query.ilike('category', `%${searchCategory}%`);
+    if (category) {
+      query = query.eq('category', category);
     }
 
-    const { data: items, error, count } = await query;
+    const { data: items, error } = await query;
 
     if (error) throw error;
 
@@ -56,22 +47,21 @@ router.get('/', clerkAuth, async (req, res, next) => {
       success: true,
       items: items.map(item => ({
         id: item.id,
-        Name: item.name, // Frontend ke variable se match karne ke liye 'Name'
+        name: item.name,
         price: parseFloat(item.price),
         category: item.category,
-        imageUrl: item.cover_image_url,
+        imageUrl: item.image_url,
         description: item.description,
-        detail_image_url: item.detail_image_url,
-        sizes: item.sizes 
+        available: item.available,
+        createdAt: item.created_at
       })),
-      totalCount: count, // Total items in DB
-      totalPages: Math.ceil(count / limit),
-      currentPage: page
+      count: items.length
     });
   } catch (error) {
     next(error);
   }
 });
+
 /**
  * POST /api/items
  * Add new food item (Admin only) - accepts base64 image
@@ -147,13 +137,9 @@ router.post('/',
           name: Name,
           price: parseFloat(price),
           category: category,
-          cover_image_url: imageUrl, 
+          image_url: imageUrl, 
           description: description || null,
-          available: true,
-          sizes: sizes,
-          detail_image_url: detailImageUrls
-
-
+          available: true
         })
         .select()
         .single();
@@ -173,12 +159,10 @@ router.post('/',
           name: item.name,
           price: parseFloat(item.price),
           category: item.category,
-          imageUrl: item.cover_image_url,
+          imageUrl: item.image_url,
           description: item.description,
           available: item.available,
-          createdAt: item.created_at,
-          detail_image_url:item.detailImageUrls,
-          sizes:item.sizes,
+          createdAt: item.created_at
         }
       });
     } catch (error) {
@@ -257,9 +241,8 @@ router.get('/:id', clerkAuth, async (req, res, next) => {
         name: item.name,
         price: parseFloat(item.price),
         category: item.category,
-       imageUrl: item.cover_image_url, 
+        imageUrl: item.image_url, 
         description: item.description,
-        detail_image_url:item.detailImageUrls||item.detail_image_url,
         available: item.available,
         createdAt: item.created_at
       }
