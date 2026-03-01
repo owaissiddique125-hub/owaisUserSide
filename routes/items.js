@@ -56,13 +56,15 @@ router.get('/', clerkAuth, async (req, res, next) => {
       success: true,
       items: items.map(item => ({
         id: item.id,
-        Name: item.name,
+        Name: item.name, // Frontend ke variable se match karne ke liye 'Name'
         price: parseFloat(item.price),
         category: item.category,
-        imageUrl: item.image_url,
-        description: item.description
+        imageUrl: item.cover_image_url,
+        description: item.description,
+        detail_image_url: item.detail_image_url,
+        sizes: item.sizes 
       })),
-      totalCount: count,
+      totalCount: count, // Total items in DB
       totalPages: Math.ceil(count / limit),
       currentPage: page
     });
@@ -145,9 +147,13 @@ router.post('/',
           name: Name,
           price: parseFloat(price),
           category: category,
-          image_url: imageUrl, 
+          cover_image_url: imageUrl, 
           description: description || null,
-          available: true
+          available: true,
+          sizes: sizes,
+          detail_image_url: detailImageUrls
+
+
         })
         .select()
         .single();
@@ -167,10 +173,12 @@ router.post('/',
           name: item.name,
           price: parseFloat(item.price),
           category: item.category,
-          imageUrl: item.image_url,
+          imageUrl: item.cover_image_url,
           description: item.description,
           available: item.available,
-          createdAt: item.created_at
+          createdAt: item.created_at,
+          detail_image_url:item.detailImageUrls,
+          sizes:item.sizes,
         }
       });
     } catch (error) {
@@ -249,44 +257,12 @@ router.get('/:id', clerkAuth, async (req, res, next) => {
         name: item.name,
         price: parseFloat(item.price),
         category: item.category,
-        imageUrl: item.image_url,
+       imageUrl: item.cover_image_url, 
         description: item.description,
+        detail_image_url:item.detailImageUrls||item.detail_image_url,
         available: item.available,
         createdAt: item.created_at
       }
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * DEBUG: GET /api/items/debug/categories
- * Show all categories and items count
- */
-router.get('/debug/categories', async (req, res, next) => {
-  try {
-    const { data: items, error } = await supabase
-      .from('items')
-      .select('id, name, category')
-      .eq('available', true);
-
-    if (error) throw error;
-
-    // Count by category
-    const categoryMap = {};
-    items.forEach(item => {
-      if (!categoryMap[item.category]) {
-        categoryMap[item.category] = [];
-      }
-      categoryMap[item.category].push(item.name);
-    });
-
-    res.json({
-      success: true,
-      categories: Object.keys(categoryMap).sort(),
-      categoryDetails: categoryMap,
-      totalItems: items.length
     });
   } catch (error) {
     next(error);
