@@ -56,15 +56,13 @@ router.get('/', clerkAuth, async (req, res, next) => {
       success: true,
       items: items.map(item => ({
         id: item.id,
-        Name: item.name, // Frontend ke variable se match karne ke liye 'Name'
+        Name: item.name,
         price: parseFloat(item.price),
         category: item.category,
-        imageUrl: item.cover_image_url,
-        description: item.description,
-        detail_image_url: item.detail_image_url,
-        sizes: item.sizes 
+        imageUrl: item.image_url,
+        description: item.description
       })),
-      totalCount: count, // Total items in DB
+      totalCount: count,
       totalPages: Math.ceil(count / limit),
       currentPage: page
     });
@@ -147,13 +145,9 @@ router.post('/',
           name: Name,
           price: parseFloat(price),
           category: category,
-          cover_image_url: imageUrl, 
+          image_url: imageUrl, 
           description: description || null,
-          available: true,
-          sizes: sizes,
-          detail_image_url: detailImageUrls
-
-
+          available: true
         })
         .select()
         .single();
@@ -173,12 +167,10 @@ router.post('/',
           name: item.name,
           price: parseFloat(item.price),
           category: item.category,
-          imageUrl: item.cover_image_url,
+          imageUrl: item.image_url,
           description: item.description,
           available: item.available,
-          createdAt: item.created_at,
-          detail_image_url:item.detailImageUrls,
-          sizes:item.sizes,
+          createdAt: item.created_at
         }
       });
     } catch (error) {
@@ -257,9 +249,8 @@ router.get('/:id', clerkAuth, async (req, res, next) => {
         name: item.name,
         price: parseFloat(item.price),
         category: item.category,
-       imageUrl: item.cover_image_url, 
+        imageUrl: item.image_url,
         description: item.description,
-        detail_image_url:item.detailImageUrls||item.detail_image_url,
         available: item.available,
         createdAt: item.created_at
       }
