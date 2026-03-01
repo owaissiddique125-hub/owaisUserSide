@@ -260,4 +260,37 @@ router.get('/:id', clerkAuth, async (req, res, next) => {
   }
 });
 
+/**
+ * DEBUG: GET /api/items/debug/categories
+ * Show all categories and items count
+ */
+router.get('/debug/categories', async (req, res, next) => {
+  try {
+    const { data: items, error } = await supabase
+      .from('items')
+      .select('id, name, category')
+      .eq('available', true);
+
+    if (error) throw error;
+
+    // Count by category
+    const categoryMap = {};
+    items.forEach(item => {
+      if (!categoryMap[item.category]) {
+        categoryMap[item.category] = [];
+      }
+      categoryMap[item.category].push(item.name);
+    });
+
+    res.json({
+      success: true,
+      categories: Object.keys(categoryMap).sort(),
+      categoryDetails: categoryMap,
+      totalItems: items.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
