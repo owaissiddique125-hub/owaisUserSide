@@ -252,4 +252,42 @@ router.get('/:id', clerkAuth, async (req, res, next) => {
   }
 });
 
+/**
+ * DEBUG: GET /api/items/debug/all
+ * Get ALL items including unavailable ones - for debugging
+ */
+router.get('/debug/all', async (req, res, next) => {
+  try {
+    const { data: items, error } = await supabase
+      .from('items')
+      .select('*')
+      .order('category', { ascending: true });
+
+    if (error) throw error;
+
+    // Count by category
+    const categoryCount = {};
+    items.forEach(item => {
+      categoryCount[item.category] = (categoryCount[item.category] || 0) + 1;
+    });
+
+    res.json({
+      success: true,
+      totalItems: items.length,
+      categories: Object.keys(categoryCount).sort(),
+      categoryCount: categoryCount,
+      items: items.map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        available: item.available,
+        imageUrl: item.image_url
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
