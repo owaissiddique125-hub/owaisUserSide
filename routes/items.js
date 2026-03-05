@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
@@ -27,19 +28,28 @@ const upload = multer({
  */
 router.get('/', clerkAuth, async (req, res, next) => {
   try {
-    const { category } = req.query;
+    // 1. Query se page aur limit uthayein
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     
+    // 2. Supabase ki range calculate karein
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     let query = supabase
       .from('items')
-      .select('*')
+      .select('*', { count: 'exact' }) // Exact count se total ka pata chalta hai
       .eq('available', true)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(from, to); // Sirf makhsoos range uthao
     
-    if (category) {
-      query = query.eq('category', category);
+    if (req.query.category) {
+      // 🔥 Handle category with/without spaces - case insensitive
+      const searchCategory = req.query.category.trim();
+      query = query.ilike('category', `%${searchCategory}%`);
     }
 
-    const { data: items, error } = await query;
+    const { data: items, error, count } = await query;
 
     if (error) throw error;
 
@@ -47,23 +57,22 @@ router.get('/', clerkAuth, async (req, res, next) => {
       success: true,
       items: items.map(item => ({
         id: item.id,
-        name: item.name,
+        Name: item.name, // Frontend ke variable se match karne ke liye 'Name'
         price: parseFloat(item.price),
         category: item.category,
-     imageUrl: item.cover_image_url,
+        imageUrl: item.cover_image_url,
         description: item.description,
-        available: item.available,
-        createdAt: item.created_at,
-         detail_image_url: item.detail_image_url,
-         sizes:item.sizes 
+        detail_image_url: item.detail_image_url,
+        sizes: item.sizes 
       })),
-      count: items.length
+      totalCount: count, // Total items in DB
+      totalPages: Math.ceil(count / limit),
+      currentPage: page
     });
   } catch (error) {
     next(error);
   }
 });
-
 /**
  * POST /api/items
  * Add new food item (Admin only) - accepts base64 image
@@ -249,7 +258,7 @@ router.get('/:id', clerkAuth, async (req, res, next) => {
         name: item.name,
         price: parseFloat(item.price),
         category: item.category,
-       imageUrl: item.cover_image_url, 
+        imageUrl: item.cover_image_url, 
         description: item.description,
         detail_image_url:item.detailImageUrls||item.detail_image_url,
         available: item.available,
